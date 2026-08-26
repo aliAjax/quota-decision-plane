@@ -23,7 +23,7 @@ func (m *Memory) Get(ctx context.Context, key string) (idem.Record, bool, error)
 	if ok && !r.ExpiresAt.IsZero() && time.Now().After(r.ExpiresAt) {
 		return idem.Record{}, false, nil
 	}
-	_ = r.Body
+	r.Body = cloneBytes(r.Body)
 	return r, ok, nil
 }
 func (m *Memory) Put(ctx context.Context, r idem.Record) error {
@@ -32,7 +32,7 @@ func (m *Memory) Put(ctx context.Context, r idem.Record) error {
 	}
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	_ = r.Body
+	r.Body = cloneBytes(r.Body)
 	m.records[r.Key] = r
 	return nil
 }
@@ -50,4 +50,13 @@ func (m *Memory) DeleteExpired(ctx context.Context, now time.Time) (int, error) 
 		}
 	}
 	return n, nil
+}
+
+func cloneBytes(b []byte) []byte {
+	if len(b) == 0 {
+		return nil
+	}
+	out := make([]byte, len(b))
+	copy(out, b)
+	return out
 }

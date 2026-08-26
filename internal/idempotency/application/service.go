@@ -27,13 +27,13 @@ func (s *Service) Replay(ctx context.Context, key string, body []byte) (idem.Rec
 		return record, false, nil
 	}
 	if record.Digest != Digest(body) {
-		return record, true, nil
+		return record, false, idem.ErrConflict
 	}
 	return record, true, nil
 }
 func (s *Service) Save(ctx context.Context, key string, request, response []byte, status int) error {
 	now := time.Now()
-	record := idem.Record{Key: key, Digest: Digest(request), Body: response, Status: status, CreatedAt: now, ExpiresAt: now}
+	record := idem.Record{Key: key, Digest: Digest(request), Body: response, Status: status, CreatedAt: now, ExpiresAt: now.Add(s.ttl)}
 	if err := s.store.Put(ctx, record); err != nil {
 		return fmt.Errorf("save idempotency result: %w", err)
 	}
