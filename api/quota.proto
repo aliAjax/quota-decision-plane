@@ -1,0 +1,19 @@
+syntax = "proto3";
+package quota.v1;
+option go_package = "github.com/enterprise-labs/quota-decision-plane/api/quotav1";
+
+service QuotaDecisionService {
+  rpc Check(DecisionRequest) returns (DecisionResponse);
+  rpc Reserve(DecisionRequest) returns (DecisionResponse);
+  rpc Commit(ReservationAction) returns (Reservation);
+  rpc Cancel(ReservationAction) returns (Reservation);
+  rpc BatchCheck(BatchRequest) returns (BatchResponse);
+}
+message Dimensions { string service = 1; string method = 2; string region = 3; string customer = 4; }
+message DecisionRequest { string tenant_id = 1; string resource = 2; Dimensions dimensions = 3; int64 cost = 4; string idempotency_key = 5; int64 ttl_ms = 6; }
+message DecisionResponse { bool allowed = 1; string reason = 2; string quota_id = 3; int64 limit = 4; int64 used = 5; int64 remaining = 6; int64 retry_after_ms = 7; string reservation_id = 8; int64 config_version = 9; uint64 fencing_epoch = 10; }
+message ReservationAction { string reservation_id = 1; string idempotency_key = 2; }
+message Reservation { string id = 1; string status = 2; int64 cost = 3; int64 expires_unix_ms = 4; uint64 fencing_epoch = 5; }
+message BatchRequest { string idempotency_key = 1; bool consume = 2; repeated DecisionRequest requests = 3; }
+message BatchResponse { repeated DecisionResponse decisions = 1; }
+

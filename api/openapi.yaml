@@ -1,0 +1,77 @@
+openapi: 3.0.3
+info:
+  title: Quota Decision Plane API
+  version: 1.0.0
+servers:
+  - url: http://127.0.0.1:18333
+security:
+  - ApiKey: []
+paths:
+  /healthz: {get: {security: [], responses: {'200': {description: Healthy}}}}
+  /readyz: {get: {security: [], responses: {'200': {description: Ready}, '503': {description: Not ready}}}}
+  /metrics: {get: {security: [], responses: {'200': {description: Prometheus text metrics}}}}
+  /v1/check:
+    post:
+      operationId: checkQuota
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/DecisionRequest'}}}}
+      responses: {'200': {description: Decision, content: {application/json: {schema: {$ref: '#/components/schemas/Decision'}}}}, '409': {description: Idempotency conflict}}
+  /v1/reserve:
+    post:
+      operationId: reserveQuota
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/DecisionRequest'}}}}
+      responses: {'201': {description: Reservation decision, content: {application/json: {schema: {$ref: '#/components/schemas/Decision'}}}}}
+  /v1/batch-check:
+    post:
+      operationId: batchCheck
+      responses: {'200': {description: Ordered decisions}}
+  /v1/reservations/{id}/commit:
+    post:
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Committed reservation}, '409': {description: Invalid state transition}}
+  /v1/reservations/{id}/cancel:
+    post:
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Cancelled reservation}, '409': {description: Invalid state transition}}
+  /v1/quotas: {get: {responses: {'200': {description: Active definitions}}}}
+  /v1/config/drafts: {post: {responses: {'201': {description: Created draft}}}}
+  /v1/config/drafts/{id}/validate:
+    post:
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Static validation report}}
+  /v1/config/drafts/{id}/publish:
+    post:
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Atomically published version}}
+  /v1/config/rollback: {post: {responses: {'200': {description: New version copied from target}}}}
+components:
+  securitySchemes:
+    ApiKey: {type: apiKey, in: header, name: X-API-Key}
+  schemas:
+    Dimensions:
+      type: object
+      properties: {service: {type: string}, method: {type: string}, region: {type: string}, customer: {type: string}}
+    DecisionRequest:
+      type: object
+      required: [tenant_id, resource, dimensions, cost, idempotency_key]
+      properties:
+        tenant_id: {type: string}
+        resource: {type: string}
+        dimensions: {$ref: '#/components/schemas/Dimensions'}
+        cost: {type: integer, format: int64, minimum: 1}
+        idempotency_key: {type: string}
+        ttl_ms: {type: integer, format: int64, minimum: 1}
+    Decision:
+      type: object
+      required: [allowed, reason, limit, used, remaining, config_version, fencing_epoch]
+      properties:
+        allowed: {type: boolean}
+        reason: {type: string}
+        quota_id: {type: string}
+        limit: {type: integer, format: int64}
+        used: {type: integer, format: int64}
+        remaining: {type: integer, format: int64}
+        retry_after_ms: {type: integer, format: int64}
+        reservation_id: {type: string}
+        config_version: {type: integer, format: int64}
+        fencing_epoch: {type: integer, format: int64}
+
