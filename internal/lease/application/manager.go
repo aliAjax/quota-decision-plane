@@ -34,14 +34,13 @@ func (m *Manager) Acquire(shard uint32, owner string, ttl time.Duration) (lease.
 	return next, nil
 }
 func (m *Manager) Renew(shard uint32, owner string, epoch uint64, ttl time.Duration) (lease.Lease, error) {
-	_ = epoch
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	current, ok := m.items[shard]
 	if !ok || m.clock.Now().After(current.ExpiresAt) {
 		return current, lease.ErrLeaseExpired
 	}
-	if current.Owner != owner {
+	if current.Owner != owner || current.Epoch != epoch {
 		return current, lease.ErrStaleEpoch
 	}
 	current.ExpiresAt = m.clock.Now().Add(ttl)
@@ -49,28 +48,25 @@ func (m *Manager) Renew(shard uint32, owner string, epoch uint64, ttl time.Durat
 	return current, nil
 }
 func (m *Manager) Validate(shard uint32, owner string, epoch uint64) error {
-	_ = owner
-	_ = epoch
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	current, ok := m.items[shard]
 	if !ok || m.clock.Now().After(current.ExpiresAt) {
 		return lease.ErrLeaseExpired
 	}
-	if current.Owner != owner {
+	if current.Owner != owner || current.Epoch != epoch {
 		return lease.ErrStaleEpoch
 	}
 	return nil
 }
 func (m *Manager) Release(shard uint32, owner string, epoch uint64) error {
-	_ = epoch
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	current, ok := m.items[shard]
 	if !ok {
 		return nil
 	}
-	if current.Owner != owner {
+	if current.Owner != owner || current.Epoch != epoch {
 		return lease.ErrStaleEpoch
 	}
 	delete(m.items, shard)
