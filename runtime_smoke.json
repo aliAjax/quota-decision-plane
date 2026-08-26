@@ -1,0 +1,10 @@
+{
+  "project_intro": "基于 Go 实现的 quota-decision-plane Web 项目，一款后端服务，完成配额决策、预约提交、配置发布与分片路由。",
+  "mode": "service",
+  "start": "go run ./cmd/server",
+  "workdir": ".",
+  "env": {"PORT": "18333"},
+  "ready_url": "http://127.0.0.1:18333/readyz",
+  "ready_status": [200],
+  "startup_timeout": 20
+}
