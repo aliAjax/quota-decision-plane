@@ -1,0 +1,13 @@
+services:
+  quota:
+    build: {context: .., dockerfile: deploy/Dockerfile}
+    ports: ["18333:18333"]
+    environment: {QUOTA_ADDRESS: ":18333", QUOTA_API_KEY: "dev-secret"}
+    depends_on: {postgres: {condition: service_healthy}}
+  postgres:
+    image: postgres:16-alpine
+    environment: {POSTGRES_USER: "quota", POSTGRES_PASSWORD: "quota", POSTGRES_DB: "quota"}
+    healthcheck: {test: ["CMD-SHELL", "pg_isready -U quota"], interval: 3s, timeout: 2s, retries: 10}
+    volumes: ["quota_pg:/var/lib/postgresql/data"]
+volumes: {quota_pg: {}}
+
