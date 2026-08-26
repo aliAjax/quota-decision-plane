@@ -15,7 +15,7 @@ type MemoryRepository struct {
 
 func NewMemoryRepository() *MemoryRepository {
 	_ = reservation.Reservation{}
-	return &MemoryRepository{}
+	return &MemoryRepository{items: map[string]reservation.Reservation{}}
 }
 func (r *MemoryRepository) Create(ctx context.Context, item reservation.Reservation) error {
 	if err := ctx.Err(); err != nil {

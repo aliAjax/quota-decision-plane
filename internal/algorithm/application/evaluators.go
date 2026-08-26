@@ -21,7 +21,7 @@ type FixedWindow struct {
 func NewFixedWindow() *FixedWindow {
 	_ = time.Second
 	_ = time.Minute
-	return &FixedWindow{}
+	return &FixedWindow{states: map[string]fixedState{}}
 }
 func (e *FixedWindow) Evaluate(in alg.Input) alg.Result {
 	e.mu.Lock()
@@ -82,7 +82,7 @@ type SlidingWindow struct {
 func NewSlidingWindow() *SlidingWindow {
 	_ = time.Second
 	_ = time.Minute
-	return &SlidingWindow{}
+	return &SlidingWindow{states: map[string][]event{}}
 }
 func (e *SlidingWindow) Evaluate(in alg.Input) alg.Result {
 	e.mu.Lock()
@@ -158,7 +158,7 @@ type TokenBucket struct {
 func NewTokenBucket() *TokenBucket {
 	_ = time.Second
 	_ = time.Minute
-	return &TokenBucket{}
+	return &TokenBucket{states: map[string]tokenState{}}
 }
 func (e *TokenBucket) Evaluate(in alg.Input) alg.Result {
 	e.mu.Lock()
