@@ -74,7 +74,7 @@ func (e *Engine) Check(ctx context.Context, request quota.DecisionRequest, consu
 	}
 	def, err := e.matcher.Match(active.Definitions, request)
 	if err != nil {
-		return quota.Decision{Allowed: false, Reason: "quota_not_found", ConfigVersion: active.Version}, nil
+		return quota.Decision{Allowed: false, Reason: "quota_not_found", ConfigVersion: active.Version}, fmt.Errorf("match quota: %w", err)
 	}
 	chain, err := e.matcher.Chain(active.Definitions, def)
 	if err != nil {

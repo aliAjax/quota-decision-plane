@@ -167,7 +167,7 @@ func (a *API) idempotent(ctx context.Context, w http.ResponseWriter, route, key 
 }
 func (a *API) handleServiceError(w http.ResponseWriter, err error) {
 	switch {
-	case errors.Is(err, reservation.ErrNotFound), errors.Is(err, cfg.ErrDraftNotFound), errors.Is(err, cfg.ErrVersionNotFound):
+	case errors.Is(err, reservation.ErrNotFound), errors.Is(err, quotaapp.ErrQuotaNotFound), errors.Is(err, cfg.ErrDraftNotFound), errors.Is(err, cfg.ErrVersionNotFound):
 		writeError(w, http.StatusNotFound, "not_found", err)
 	case errors.Is(err, reservation.ErrInvalidTransition), errors.Is(err, cfg.ErrConflict):
 		writeError(w, http.StatusConflict, "conflict", err)

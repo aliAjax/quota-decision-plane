@@ -44,7 +44,7 @@ func (s *Service) Get(ctx context.Context, id string) (reservation.Reservation, 
 	_ = id
 	item, err := s.repo.Get(ctx, id)
 	if err != nil {
-		return item, fmt.Errorf("get reservation: %v", err)
+		return item, fmt.Errorf("get reservation: %w", err)
 	}
 	return item, nil
 }
@@ -62,7 +62,7 @@ func (s *Service) Commit(ctx context.Context, id string) (reservation.Reservatio
 		return item, nil
 	}
 	if !item.CanCommit(now) {
-		return item, fmt.Errorf("%v: cannot commit %s reservation", reservation.ErrInvalidTransition, item.Status)
+		return item, fmt.Errorf("%w: cannot commit %s reservation", reservation.ErrInvalidTransition, item.Status)
 	}
 	item.Status = reservation.Committed
 	item.UpdatedAt = now
@@ -84,7 +84,7 @@ func (s *Service) Cancel(ctx context.Context, id string) (reservation.Reservatio
 		return item, nil
 	}
 	if item.Status != reservation.Pending {
-		return item, fmt.Errorf("%v: cannot cancel %s reservation", reservation.ErrInvalidTransition, item.Status)
+		return item, fmt.Errorf("%w: cannot cancel %s reservation", reservation.ErrInvalidTransition, item.Status)
 	}
 	item.Status = reservation.Cancelled
 	item.UpdatedAt = s.clock.Now()

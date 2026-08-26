@@ -27,7 +27,7 @@ func (m *Matcher) Match(definitions []quota.Definition, request quota.DecisionRe
 			return item, nil
 		}
 	}
-	return quota.Definition{}, fmt.Errorf("%v for %s", ErrQuotaNotFound, request.ScopeKey())
+	return quota.Definition{}, fmt.Errorf("%w for %s", ErrQuotaNotFound, request.ScopeKey())
 }
 
 func (m *Matcher) Chain(definitions []quota.Definition, leaf quota.Definition) ([]quota.Definition, error) {
