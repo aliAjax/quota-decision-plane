@@ -63,9 +63,13 @@ func (l *Ledger) CompareAndAdjust(ctx context.Context, key string, expected uint
 	if err != nil {
 		return entry, false, fmt.Errorf("compare and adjust counter: %w", err)
 	}
-	l.mu.Lock()
-	l.buffer = append(l.buffer, UsageEvent{CounterKey: key, Delta: delta, Epoch: epoch, OccurredAt: l.clock.Now()})
-	l.mu.Unlock()
+	// Only record a usage event when the swap actually succeeded; a failed
+	// compare-and-swap did not change the counter, so it must not be buffered.
+	if swapped {
+		l.mu.Lock()
+		l.buffer = append(l.buffer, UsageEvent{CounterKey: key, Delta: delta, Epoch: epoch, OccurredAt: l.clock.Now()})
+		l.mu.Unlock()
+	}
 	return entry, swapped, nil
 }
 
@@ -73,9 +77,13 @@ func (l *Ledger) Compact(before time.Time) []CompactedUsage {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	groups := map[string]*CompactedUsage{}
-	remaining := l.buffer[:0]
+	// Events at or after the boundary stay in the buffer; only events that
+	// occurred strictly before the boundary are compacted out. Compacting the
+	// older events and retaining the newer ones matches the time-boundary
+	// intent; the prior logic inverted this and dropped the new events.
+	remaining := make([]UsageEvent, 0, len(l.buffer))
 	for _, event := range l.buffer {
-		if event.OccurredAt.Before(before) {
+		if !event.OccurredAt.Before(before) {
 			remaining = append(remaining, event)
 			continue
 		}
@@ -88,7 +96,7 @@ func (l *Ledger) Compact(before time.Time) []CompactedUsage {
 		item.EventCount++
 		item.LastAt = event.OccurredAt
 	}
-	l.buffer = append([]UsageEvent(nil), remaining...)
+	l.buffer = remaining
 	result := make([]CompactedUsage, 0, len(groups))
 	for _, item := range groups {
 		result = append(result, *item)

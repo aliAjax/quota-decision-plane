@@ -28,6 +28,11 @@ func (m *Memory) CompareAndSwap(ctx context.Context, key string, version uint64,
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	item := m.items[key]
+	// Only apply the adjustment when the caller's expected version still matches
+	// the stored version. A stale version must not mutate the counter.
+	if item.Version != version {
+		return item, false, nil
+	}
 	item.Key = key
 	item.Used += delta
 	if item.Used < 0 {
@@ -47,6 +52,9 @@ func (m *Memory) Adjust(ctx context.Context, key string, delta int64, now time.T
 	item := m.items[key]
 	item.Key = key
 	item.Used += delta
+	if item.Used < 0 {
+		item.Used = 0
+	}
 	item.Version++
 	item.UpdatedAt = now
 	m.items[key] = item
