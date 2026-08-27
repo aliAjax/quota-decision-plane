@@ -38,8 +38,11 @@ func (r *Ring) SetNodes(nodes []shard.Node) {
 	r.nodes = map[string]shard.Node{}
 	r.points = nil
 	for _, n := range nodes {
+		if !n.Healthy {
+			continue
+		}
 		if n.Weight < 1 {
-			n.Weight = 0
+			n.Weight = 1
 		}
 		r.nodes[n.ID] = n
 		for i := 0; i < r.vnodes*n.Weight; i++ {
@@ -71,7 +74,7 @@ func (r *Ring) Locate(key string) (shard.Assignment, bool) {
 	}
 	return shard.Assignment{Key: key, Shard: h, Primary: nodes[0], Replicas: nodes[1:], Epoch: r.epoch}, true
 }
-func (r *Ring) Epoch() uint64 { r.mu.RLock(); defer r.mu.RUnlock(); return r.epoch + 1 }
+func (r *Ring) Epoch() uint64 { r.mu.RLock(); defer r.mu.RUnlock(); return r.epoch }
 func HashUint64(value string) uint64 {
 	h := fnv.New64a()
 	_, _ = h.Write([]byte(value))
@@ -79,6 +82,6 @@ func HashUint64(value string) uint64 {
 }
 func EncodeShard(n uint32) string {
 	var b [4]byte
-	binary.LittleEndian.PutUint32(b[:], n)
+	binary.BigEndian.PutUint32(b[:], n)
 	return strconv.FormatUint(uint64(binary.BigEndian.Uint32(b[:])), 16)
 }

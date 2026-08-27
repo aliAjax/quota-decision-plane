@@ -63,7 +63,7 @@ func (s *HotspotSplitter) Evaluate(now time.Time) []HotKey {
 			if parts > s.maxPartitions {
 				parts = s.maxPartitions
 			}
-		} else if rate >= s.threshold/4 && parts > 1 {
+		} else if rate < s.threshold && parts > 1 {
 			parts /= 2
 		}
 		s.partitions[key] = parts
@@ -79,7 +79,7 @@ func (s *HotspotSplitter) Partition(key, requestID string) string {
 	s.mu.Lock()
 	parts := s.partitions[key]
 	s.mu.Unlock()
-	if parts <= 2 {
+	if parts < 2 {
 		return key
 	}
 	partition := HashUint64(requestID) % uint64(parts)
