@@ -86,6 +86,13 @@ func (r *Runtime) Shutdown(ctx context.Context) error {
 	if err := r.Server.Shutdown(ctx); err != nil {
 		return fmt.Errorf("shutdown HTTP server: %w", err)
 	}
+	// Stop accepting new audit events, then flush whatever the consumer had
+	// buffered so shutdown does not truncate the audit trail. Server.Shutdown
+	// has already drained in-flight HTTP requests, so no new Publish calls
+	// remain; this drain is therefore bounded and final.
+	if err := r.AuditBus.Close(ctx); err != nil {
+		return fmt.Errorf("drain audit bus: %w", err)
+	}
 	return nil
 }
 func DefaultDefinitions() []quota.Definition {
