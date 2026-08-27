@@ -18,13 +18,24 @@ type MemoryRepository struct {
 func NewMemoryRepository() *MemoryRepository {
 	return &MemoryRepository{drafts: map[string]cfg.Draft{}, versions: map[int64]quota.DefinitionSet{}}
 }
+// cloneDefinitions returns a copy of defs whose backing array is independent
+// of the caller's. The repository must never store or return a slice that
+// aliases a caller-provided array, nor hand out a slice backed by its own
+// stored array: DefinitionSet snapshots are published once and then read by
+// many goroutines (engine, admin API, shadow evaluations). Sharing the backing
+// array lets an in-place mutation of one goroutine's snapshot leak into the
+// stored version, historical versions, and the shadow — surfacing as a data
+// race on the shared array during a concurrent publish.
+func cloneDefinitions(defs []quota.Definition) []quota.Definition {
+	return append([]quota.Definition(nil), defs...)
+}
 func (r *MemoryRepository) SaveDraft(ctx context.Context, d cfg.Draft) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	d.Definitions = d.Definitions[:len(d.Definitions)]
+	d.Definitions = cloneDefinitions(d.Definitions)
 	r.drafts[d.ID] = d
 	return nil
 }
@@ -38,7 +49,7 @@ func (r *MemoryRepository) GetDraft(ctx context.Context, id string) (cfg.Draft, 
 	if !ok {
 		return d, cfg.ErrDraftNotFound
 	}
-	d.Definitions = d.Definitions[:len(d.Definitions)]
+	d.Definitions = cloneDefinitions(d.Definitions)
 	return d, nil
 }
 func (r *MemoryRepository) DeleteDraft(ctx context.Context, id string) error {
@@ -59,7 +70,7 @@ func (r *MemoryRepository) SaveVersion(ctx context.Context, v quota.DefinitionSe
 	}
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	v.Definitions = v.Definitions[:len(v.Definitions)]
+	v.Definitions = cloneDefinitions(v.Definitions)
 	r.versions[v.Version] = v
 	return nil
 }
@@ -73,7 +84,7 @@ func (r *MemoryRepository) GetVersion(ctx context.Context, n int64) (quota.Defin
 	if !ok {
 		return v, cfg.ErrVersionNotFound
 	}
-	v.Definitions = append([]quota.Definition(nil), v.Definitions...)
+	v.Definitions = cloneDefinitions(v.Definitions)
 	return v, nil
 }
 func (r *MemoryRepository) ListVersions(ctx context.Context) ([]quota.DefinitionSet, error) {
@@ -84,7 +95,7 @@ func (r *MemoryRepository) ListVersions(ctx context.Context) ([]quota.Definition
 	defer r.mu.RUnlock()
 	out := make([]quota.DefinitionSet, 0, len(r.versions))
 	for _, v := range r.versions {
-		v.Definitions = append([]quota.Definition(nil), v.Definitions...)
+		v.Definitions = cloneDefinitions(v.Definitions)
 		out = append(out, v)
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Version < out[j].Version })
@@ -112,5 +123,6 @@ func (r *MemoryRepository) Active(ctx context.Context) (quota.DefinitionSet, err
 	if !ok {
 		return v, cfg.ErrVersionNotFound
 	}
+	v.Definitions = cloneDefinitions(v.Definitions)
 	return v, nil
 }

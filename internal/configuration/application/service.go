@@ -207,6 +207,6 @@ func (s *Service) Shadow() *quota.DefinitionSet {
 		return nil
 	}
 	v := *s.shadow
-	v.Definitions = s.shadow.Definitions[:len(s.shadow.Definitions)]
+	v.Definitions = append([]quota.Definition(nil), s.shadow.Definitions...)
 	return &v
 }
